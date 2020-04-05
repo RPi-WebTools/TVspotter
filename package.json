@@ -1,0 +1,18 @@
+{
+  "name": "tvspotter",
+  "version": "1.0.0",
+  "description": "Set notifications / reminders for new movies or show seasons",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://25.31.114.58:3000/RPi-WebTools/TVspotter.git"
+  },
+  "author": "Viperinius",
+  "license": "MIT",
+  "dependencies": {
+    "node-fetch": "^2.6.0"
+  }
+}

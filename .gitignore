@@ -20,8 +20,8 @@ yarn-error.log*
 *.sln
 *.sw?
 
-# Database
-*.db
+# TMDb API key file
+key.js
 
 # JSDoc output
 out
