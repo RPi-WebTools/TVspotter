@@ -40,10 +40,17 @@ class TMDb {
      * @param {string|Number} width Image width, e. g. 500
      */
     getImageLink (imageFilename, width) {
+        if (width === 'original') return this.imageUri + width + imageFilename
         return this.imageUri + 'w' + width + imageFilename
     }
 
-    search(type, query, page) {
+    /**
+     * Search through TMDb for movies or TV shows
+     * @param {string} type Type of search (movie or tv)
+     * @param {string} query The search term
+     * @param {string|Number} page What result page to return
+     */
+    search (type, query, page) {
         return new Promise((resolve, reject) => {
             let url = ''
             if (type === 'movie') url = this.baseUri + 'search/movie'
@@ -113,6 +120,27 @@ class TMDb {
     }
 
     /**
+     * Get release dates of a movie for different types (theatrical, digital, ...)
+     * Types of releases:
+     * 1. Premiere
+     * 2. Theatrical limited
+     * 3. Theatrical
+     * 4. Digital
+     * 5. Physical
+     * 6. TV
+     * @param {string|Number} id TMDb movie ID
+     */
+    getMovieReleases (id) {
+        return new Promise((resolve, reject) => {
+            let url = this.baseUri + 'movie/' + id + '/release_dates' + this.addKeyToUri() + this.addLanguageToUri()
+            console.log(url)
+            resolve(
+                this.requestData(url).then(data => data)
+            )
+        })
+    }
+
+    /**
      * Get upcoming movies
      */
     getMovieUpcoming () {
@@ -126,13 +154,4 @@ class TMDb {
     }
 }
 
-const api_key = require('./key')
-
-let api = new TMDb(api_key)
-
-//api.getTVShowDetails(79410).then(data => console.log(data))
-//api.getTVOnTheAir().then(data => console.log(data))
-//api.getTVAiringToday().then(data => console.log(data))
-//api.getMovieDetails(339395).then(data => console.log(data))
-//api.getMovieUpcoming().then(data => console.log(data))
-api.search('movie', '1917', 1).then(data => console.log(data))
+module.exports = TMDb
