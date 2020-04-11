@@ -55,8 +55,8 @@ class TVspotter {
      * @param {string|Number} backdropWidth backdrop pixel width
      */
     formSearchPayload (item, posterWidth='original', backdropWidth='original') {
-        let fullPosterPath = api.getImageLink(item.poster_path, posterWidth)
-        let fullBackdropPath = api.getImageLink(item.backdrop_path, backdropWidth)
+        let fullPosterPath = this.api.getImageLink(item.poster_path, posterWidth)
+        let fullBackdropPath = this.api.getImageLink(item.backdrop_path, backdropWidth)
         let tmdbId = item.id
         
         let firstRelease = null
@@ -90,10 +90,76 @@ class TVspotter {
     search (type, query, page) {
         return new Promise((resolve, reject) => {
             resolve(
-                api.search(type, query, page).then(results => {
+                this.api.search(type, query, page).then(results => {
                     let items = []
                     results.results.forEach(result => {
-                        items.push(formSearchPayload(result))
+                        items.push(this.formSearchPayload(result))
+                    })
+
+                    return {
+                        resultCount: results.total_results,
+                        pages: results.total_pages,
+                        items: items
+                    }
+                })
+            )
+        })
+    }
+
+    /**
+     * Get a list of shows that have an episode with an air date in the next 7 days
+     */
+    getTVOnTheAir () {
+        return new Promise((resolve, reject) => {
+            resolve(
+                this.api.getTVOnTheAir().then(results => {
+                    let items = []
+                    results.results.forEach(result => {
+                        items.push(this.formSearchPayload(result))
+                    })
+
+                    return {
+                        resultCount: results.total_results,
+                        pages: results.total_pages,
+                        items: items
+                    }
+                })
+            )
+        })
+    }
+
+    /**
+     * Get a list of shows that have an episode with an air date in the next 7 days
+     */
+    getTVAiringToday () {
+        return new Promise((resolve, reject) => {
+            resolve(
+                this.api.getTVAiringToday().then(results => {
+                    let items = []
+                    results.results.forEach(result => {
+                        items.push(this.formSearchPayload(result))
+                    })
+
+                    return {
+                        resultCount: results.total_results,
+                        pages: results.total_pages,
+                        items: items
+                    }
+                })
+            )
+        })
+    }
+
+    /**
+     * Get upcoming movies
+     */
+    getMovieUpcoming () {
+        return new Promise((resolve, reject) => {
+            resolve(
+                this.api.getMovieUpcoming().then(results => {
+                    let items = []
+                    results.results.forEach(result => {
+                        items.push(this.formSearchPayload(result))
                     })
 
                     return {
@@ -253,18 +319,14 @@ class TVspotter {
             }
         })
     }
+
+
 }
 
+module.exports = TVspotter
 
-let spotter = new TVspotter('', '', '')
-spotter.checkMovie(502425, 4).then(data => console.log(data))
-
-// TODO: do something with these:
-// api.getTVOnTheAir().then(data => console.log(data))
-// api.getTVAiringToday().then(data => console.log(data))
-// api.getMovieUpcoming().then(data => console.log(data))
-
-
-//search('movie', "The Hitman's Wife's Bodyguard", 1).then(data => console.log(data))
-
-//checkTV(60059, 4).then(data => console.log(data))
+// let spotter = new TVspotter('','','')
+// spotter.checkMovie(502425, 4).then(data => console.log(data))
+// spotter.search('movie', "The Hitman's Wife's Bodyguard", 1).then(data => console.log(data))
+// spotter.checkTV(60059, 4).then(data => console.log(data))
+// spotter.getMovieUpcoming().then(data => console.log(data))
