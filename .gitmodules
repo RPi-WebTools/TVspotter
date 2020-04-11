@@ -1,0 +1,3 @@
+[submodule "DBmngr"]
+	path = DBmngr
+	url = https://github.com/RPi-WebTools/DBmngr.git
