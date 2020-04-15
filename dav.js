@@ -69,7 +69,6 @@ class DAVClient {
     checkIfEventExists (calendar, data) {
         let events = calendar.objects.filter(obj => obj.calendarData.includes(data.summary))
         let found = false
-        console.log(events)
         events.forEach(event => {
             let hasSameStartDate = event.calendarData.includes('DTSTART;VALUE=DATE:' + data.start.replace(/-/g, ''))
             let hasSameEndDate = event.calendarData.includes('DTEND;VALUE=DATE:' + data.end.replace(/-/g, ''))

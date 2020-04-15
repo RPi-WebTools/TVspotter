@@ -1,6 +1,15 @@
+const fs = require('fs')
+const path = require('path')
 const TMDb = require('./api')
 const api_key = require('./key')
 const DAVClient = require('./dav')
+const DAO = require('./DBmngr/dao')
+const SQLiteWriter = require('./DBmngr/sqliteWriter')
+const SQLiteReader = require('./DBmngr/sqliteReader')
+
+const dbName = path.resolve(__dirname, 'tvspotter.db')
+const tableMovies = 'movies'
+const tableTV = 'tv'
 
 /**
  * Sleep for x milliseconds
@@ -8,6 +17,66 @@ const DAVClient = require('./dav')
  */
 function sleep (ms) {
     return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+/**
+ * Get columns to use in movies table
+ */
+function getColsMovies () {
+    return {
+        names: [
+            'tmdbId',
+            'name',
+            'originalName',
+            'firstRelease',
+            'theatricalRelease',
+            'digitalPhysicalRelease',
+            'poster',
+            'backdrop',
+            'status'
+        ],
+        types: [
+            'INTEGER',
+            'TEXT',
+            'TEXT',
+            'TEXT',
+            'TEXT',
+            'TEXT',
+            'TEXT',
+            'TEXT',
+            'INTEGER'
+        ]
+    }
+}
+
+/**
+ * Get columsn to use in tv table
+ */
+function getColsTV () {
+    return {
+        names: [
+            'tmdbId',
+            'name',
+            'originalName',
+            'firstRelease',
+            'nextRelease',
+            'nextEpisode',
+            'poster',
+            'backdrop',
+            'status'
+        ],
+        types: [
+            'INTEGER',
+            'TEXT',
+            'TEXT',
+            'TEXT',
+            'TEXT',
+            'TEXT',
+            'TEXT',
+            'TEXT',
+            'INTEGER'
+        ]
+    }
 }
 
 class TVspotter {
@@ -25,6 +94,10 @@ class TVspotter {
             davPassword
         )
         sleep(2000).then(() => this.calTvspotter = this.client.getCalendars().filter(obj => obj.displayName === 'TVspotter')[0])
+        this.writer = new SQLiteWriter(new DAO(dbName, 'CW'))
+        this.writer.setWalMode()
+        this.closeDb()
+        this.reader = new SQLiteReader(new DAO(dbName, 'RO'))
     }
 
     /**
@@ -40,7 +113,6 @@ class TVspotter {
 
         let target = new Date(dateTarget)
         let difference = Math.round((target - now) / (1000 * 60 * 60 * 24))
-        console.log(difference)
 
         return {
             isClose: (difference <= maxDifference),
@@ -185,8 +257,15 @@ class TVspotter {
                 this.api.getTVShowDetails(id).then(details => {
                     if (!details.in_production) {
                         return {
-                            status: 'ended',
-                            nextEpisode: ''
+                            tmdbId: id,
+                            name: details.name,
+                            originalName: details.original_name,
+                            firstRelease: details.first_air_date,
+                            nextRelease: '',
+                            nextEpisode: '',
+                            poster: this.api.getImageLink(details.poster_path, 'original'),
+                            backdrop: this.api.getImageLink(details.backdrop_path, 'original'),
+                            status: 'ended'
                         }
                     }
                     
@@ -208,8 +287,15 @@ class TVspotter {
                     }
 
                     return {
-                        status: status,
-                        nextEpisode: nextEpisode
+                        tmdbId: id,
+                        name: details.name,
+                        originalName: details.original_name,
+                        firstRelease: details.first_air_date,
+                        nextRelease: details.next_episode_to_air.air_date,
+                        nextEpisode: nextEpisode,
+                        poster: this.api.getImageLink(details.poster_path, 'original'),
+                        backdrop: this.api.getImageLink(details.backdrop_path, 'original'),
+                        status: status
                     }
                 })
             )
@@ -261,6 +347,9 @@ class TVspotter {
                             status = 'theatrical-none,' + isClose.difference
                         }
                     }
+                    else {
+                        theatrical = [{ release_date: 'T' }]
+                    }
 
                     if (digitalPhysical.length) {
                         let date = digitalPhysical[0].release_date.substring(0, digitalPhysical[0].release_date.lastIndexOf('T'))
@@ -278,8 +367,19 @@ class TVspotter {
                             status = 'digitalPhysical-none,' + isClose.difference
                         }
                     }
+                    else {
+                        digitalPhysical = [{ release_date: 'T' }]
+                    }
 
                     return {
+                        tmdbId: id,
+                        name: intermedResult.details.title,
+                        originalName: intermedResult.details.original_title,
+                        firstRelease: intermedResult.details.release_date,
+                        theatricalRelease: theatrical[0].release_date.substring(0, theatrical[0].release_date.lastIndexOf('T')),
+                        digitalPhysicalRelease: digitalPhysical[0].release_date.substring(0, digitalPhysical[0].release_date.lastIndexOf('T')),
+                        poster: this.api.getImageLink(intermedResult.details.poster_path, 'original'),
+                        backdrop: this.api.getImageLink(intermedResult.details.backdrop_path, 'original'),
                         status: status
                     }
                 })
@@ -320,13 +420,84 @@ class TVspotter {
         })
     }
 
+    /**
+     * Open a new database connection
+     */
+    openDb () {
+        this.writer = new SQLiteWriter(new DAO(dbName, 'CW'))
+    }
+
+    /**
+     * Close database connection
+     */
+    closeDb () {
+        this.writer.closeDb()
+    }
+
+    /**
+     * Set up the database tables
+     */
+    initDb () {
+        this.openDb()
+        this.writer.serialize()
+        this.writer.dropTable(tableMovies)
+        this.writer.dropTable(tableTV)
+
+        const colsMovies = getColsMovies()
+        const colsTV = getColsTV()
+        this.writer.createTable(tableMovies, colsMovies.names, colsMovies.types)
+        this.writer.createTable(tableTV, colsTV.names, colsTV.types)
+        this.closeDb()
+    }
+
+    /**
+     * Initialise the database with all needed tables
+     * @param {boolean} doReset True => delete the db tables and recreate
+     */
+    initialise (doReset=false) {
+        let sleepFor = 1
+        if (doReset) {
+            this.initDb()
+            sleepFor = 2000
+        }
+        // wait a bit to make sure it is done creating (if newly created)
+        return sleep(sleepFor)
+    }
+
+    /**
+     * Store given information in the database
+     * @param {string} table Table name
+     * @param {Array<string>} cols Names of the table columns
+     * @param {Array|Object} data Data to write
+     */
+    storeGeneric (table, cols, data) {
+        this.openDb()
+        if (Array.isArray(data)) {
+            let dataToWrite = []
+            data.forEach(element => {
+                dataToWrite.push(Object.values(element))
+            })
+            this.writer.insertMultipleRows(table, cols, dataToWrite)
+        }
+        else {
+            this.writer.insertRow(table, cols, Object.values(data))
+        }
+        this.closeDb()
+    }
+
 
 }
 
 module.exports = TVspotter
 
-// let spotter = new TVspotter('','','')
+let spotter = new TVspotter('','','')
 // spotter.checkMovie(502425, 4).then(data => console.log(data))
 // spotter.search('movie', "The Hitman's Wife's Bodyguard", 1).then(data => console.log(data))
 // spotter.checkTV(60059, 4).then(data => console.log(data))
 // spotter.getMovieUpcoming().then(data => console.log(data))
+spotter.initialise(true).then(() => {
+    // spotter.checkMovie(502425, 4).then(data => {
+    //     spotter.storeGeneric(tableMovies, getColsMovies().names, data)
+    // })
+    spotter.checkTV(60059, 4).then(data => console.log(data))
+})
