@@ -1,4 +1,3 @@
-const fs = require('fs')
 const path = require('path')
 const TMDb = require('./api')
 const api_key = require('./key')
@@ -118,6 +117,90 @@ class TVspotter {
             isClose: (difference <= maxDifference),
             difference: difference
         }
+    }
+
+    /**
+     * Convert a raw status to an integer code
+     * Returns:
+     * -1   if nothing fitting found |
+     *  0   tv ended |
+     *  10  tv released |
+     *  20x tv close (x=difference) |
+     *  30x tv none (x=difference) |
+     *  11  movie theat released |
+     *  12  movie dig released |
+     *  21x movie theat close |
+     *  22x movie dig close |
+     *  31x movie theat none |
+     *  32x movie dig none |
+     * @param {string} mode tv or movie
+     * @param {string} raw Can be 'ended', 'already-released', 'close,X' or 'none,X'  (X is difference) for TV
+     *                     or 'theatrical-' / 'digitalPhysical-' following same as for TV for movies
+     */
+    encodeStatus (mode, raw) {
+        let status = -1
+        let difference = ''
+        if (mode === 'tv') {
+            switch (true) {
+                case raw === 'ended':
+                    status = 0
+                    break
+                case raw === 'already-released':
+                    status = 10
+                    break
+                case /^close/.test(raw):
+                    status = 20
+                    difference = raw.split('close,')[1]
+                    status *= (10 ** difference.length)
+                    status += Number(difference)
+                    break
+                case /^none/.test(raw):
+                    status = 30
+                    difference = raw.split('none,')[1]
+                    status *= (10 ** difference.length)
+                    status += Number(difference)
+                    break
+                default:
+                    break
+            }
+        }
+        else if (mode === 'movie') {
+            switch (true) {
+                case raw === 'theatrical-already-released':
+                    status = 11
+                    break
+                case raw === 'digitalPhysical-already-released':
+                    status = 12
+                    break
+                case /^theatrical-close/.test(raw):
+                    status = 21
+                    difference = raw.split('theatrical-close,')[1]
+                    status *= (10 ** difference.length)
+                    status += Number(difference)
+                    break
+                case /^digitalPhysical-close/.test(raw):
+                    status = 22
+                    difference = raw.split('digitalPhysical-close,')[1]
+                    status *= (10 ** difference.length)
+                    status += Number(difference)
+                    break
+                case /^theatrical-none/.test(raw):
+                    status = 31
+                    difference = raw.split('theatrical-none,')[1]
+                    status *= (10 ** difference.length)
+                    status += Number(difference)
+                    break
+                case /^digitalPhysical-none/.test(raw):
+                    status = 32
+                    difference = raw.split('digitalPhysical-none,')[1]
+                    status *= (10 ** difference.length)
+                    status += Number(difference)
+                    break
+                default:
+                    break
+            }
+        }
+        return status
     }
 
     /**
@@ -295,7 +378,7 @@ class TVspotter {
                         nextEpisode: nextEpisode,
                         poster: this.api.getImageLink(details.poster_path, 'original'),
                         backdrop: this.api.getImageLink(details.backdrop_path, 'original'),
-                        status: status
+                        status: this.encodeStatus('tv', status)
                     }
                 })
             )
@@ -380,7 +463,7 @@ class TVspotter {
                         digitalPhysicalRelease: digitalPhysical[0].release_date.substring(0, digitalPhysical[0].release_date.lastIndexOf('T')),
                         poster: this.api.getImageLink(intermedResult.details.poster_path, 'original'),
                         backdrop: this.api.getImageLink(intermedResult.details.backdrop_path, 'original'),
-                        status: status
+                        status: this.encodeStatus('movie', status)
                     }
                 })
             )
@@ -489,15 +572,3 @@ class TVspotter {
 }
 
 module.exports = TVspotter
-
-let spotter = new TVspotter('','','')
-// spotter.checkMovie(502425, 4).then(data => console.log(data))
-// spotter.search('movie', "The Hitman's Wife's Bodyguard", 1).then(data => console.log(data))
-// spotter.checkTV(60059, 4).then(data => console.log(data))
-// spotter.getMovieUpcoming().then(data => console.log(data))
-spotter.initialise(true).then(() => {
-    // spotter.checkMovie(502425, 4).then(data => {
-    //     spotter.storeGeneric(tableMovies, getColsMovies().names, data)
-    // })
-    spotter.checkTV(60059, 4).then(data => console.log(data))
-})
