@@ -4,12 +4,13 @@ class TMDb {
     /**
      * Small TMDb API wrapper
      * @param {string} key API key from TMDb
+     * @param {string} lang Language code to use
      */
-    constructor (key) {
+    constructor (key, lang='en-US') {
         this.apiKey = key
         this.baseUri = 'https://api.themoviedb.org/3/'
         this.imageUri = 'https://image.tmdb.org/t/p/'
-        this.language = 'en-US'
+        this.language = lang
     }
 
     /**

@@ -84,9 +84,10 @@ class TVspotter {
      * @param {string} davServerUrl URL of the CalDAV server
      * @param {string} davUser CalDAV user name
      * @param {string} davPassword CalDAV user password
+     * @param {string} lang Language code to use, default en-US
      */
-    constructor (davServerUrl, davUser, davPassword) {
-        this.api = new TMDb(api_key)
+    constructor (davServerUrl, davUser, davPassword, lang='en-US') {
+        this.api = new TMDb(api_key, lang)
         this.client = new DAVClient(
             davServerUrl,
             davUser,
