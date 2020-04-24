@@ -62,7 +62,6 @@ class TMDb {
 
             url += this.addKeyToUri() + this.addLanguageToUri() + '&query=' + query + '&page=' + page + '&include_adult=true'
 
-            console.log(url)
             resolve(
                 this.requestData(url).then(data => data)
             )
@@ -76,7 +75,6 @@ class TMDb {
     getTVShowDetails (id) {
         return new Promise((resolve, reject) => {
             let url = this.baseUri + 'tv/' + id + this.addKeyToUri() + this.addLanguageToUri()
-            console.log(url)
             resolve(
                 this.requestData(url).then(data => data)
             )
@@ -89,7 +87,6 @@ class TMDb {
     getTVOnTheAir () {
         return new Promise((resolve, reject) => {
             let url = this.baseUri + 'tv/on_the_air' + this.addKeyToUri() + this.addLanguageToUri() + '&page=1'
-            console.log(url)
             resolve(
                 this.requestData(url).then(data => data)
             )
@@ -102,7 +99,6 @@ class TMDb {
     getTVAiringToday () {
         return new Promise((resolve, reject) => {
             let url = this.baseUri + 'tv/airing_today' + this.addKeyToUri() + this.addLanguageToUri() + '&page=1' + '&timezone=DE'
-            console.log(url)
             resolve(
                 this.requestData(url).then(data => data)
             )
@@ -116,7 +112,6 @@ class TMDb {
     getMovieDetails (id) {
         return new Promise((resolve, reject) => {
             let url = this.baseUri + 'movie/' + id + this.addKeyToUri() + this.addLanguageToUri()
-            console.log(url)
             resolve(
                 this.requestData(url).then(data => data)
             )
@@ -137,7 +132,6 @@ class TMDb {
     getMovieReleases (id) {
         return new Promise((resolve, reject) => {
             let url = this.baseUri + 'movie/' + id + '/release_dates' + this.addKeyToUri() + this.addLanguageToUri()
-            console.log(url)
             resolve(
                 this.requestData(url).then(data => data)
             )
@@ -150,7 +144,6 @@ class TMDb {
     getMovieUpcoming () {
         return new Promise((resolve, reject) => {
             let url = this.baseUri + 'movie/upcoming' + this.addKeyToUri() + this.addLanguageToUri() + '&page=1'
-            console.log(url)
             resolve(
                 this.requestData(url).then(data => data)
             )
