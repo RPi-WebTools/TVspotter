@@ -93,11 +93,11 @@ class TVspotter {
             davUser,
             davPassword
         )
-        sleep(2000).then(() => this.calTvspotter = this.client.getCalendars().filter(obj => obj.displayName === 'TVspotter')[0])
+        sleep(3000).then(() => this.calTvspotter = this.client.getCalendars().filter(obj => obj.displayName === 'TVspotter')[0])
         this.writer = new SQLiteWriter(new DAO(dbName, 'CW'))
         this.writer.setWalMode()
         this.closeDb()
-        this.reader = new SQLiteReader(new DAO(dbName, 'RO'))
+        sleep(1000).then(() => this.reader = new SQLiteReader(new DAO(dbName, 'RO')))
     }
 
     /**
@@ -285,7 +285,7 @@ class TVspotter {
     }
 
     /**
-     * Get a list of shows that have an episode with an air date in the next 7 days
+     * Get a list of shows that have an episode airing today
      */
     getTVAiringToday () {
         return new Promise((resolve, reject) => {
@@ -349,7 +349,7 @@ class TVspotter {
                             nextEpisode: '',
                             poster: this.api.getImageLink(details.poster_path, 'original'),
                             backdrop: this.api.getImageLink(details.backdrop_path, 'original'),
-                            status: 'ended'
+                            status: this.encodeStatus('tv', 'ended')
                         }
                     }
                     
@@ -569,7 +569,90 @@ class TVspotter {
         this.closeDb()
     }
 
+    /**
+     * Store a list of movies / a movie in the database
+     * @param {Array|Object} data Movies to store
+     */
+    storeMovies (data) {
+        this.storeGeneric(tableMovies, getColsMovies().names, data)
+    }
 
+    /**
+     * Store a list of TV shows / a TV show in the database
+     * @param {Array|Object} data TV shows to store
+     */
+    storeTV (data) {
+        this.storeGeneric(tableTV, getColsTV().names, data)
+    }
+
+    /**
+     * Read rows from a database table
+     * @param {string} table Table name
+     * @param {Array<string>} cols Names of the table columns
+     * @param {Number} rowCount Max number of rows to return
+     * @param {string} order ASC or DESC
+     */
+    readGeneric (table, cols, rowCount=0, order='ASC') {
+        return this.reader.readAllRows(
+            table,
+            cols,
+            {
+                orderBy: 'id',
+                orderOrientation: order
+            }
+        ).then(data => {
+            if (rowCount > 0) {
+                return data.slice(0, rowCount)
+            }
+            return data
+        })
+    }
+
+    /**
+     * Read movies from the database
+     * @param {Number} rowCount Max number of movies to return
+     * @param {string} order ASC or DESC
+     */
+    readMovies (rowCount=0, order='ASC') {
+        return this.readGeneric(tableMovies, getColsMovies().names, rowCount, order)
+    }
+
+    /**
+     * Read TV shows from the database
+     * @param {Number} rowCount Max number of shows to return
+     * @param {string} order ASC or DESC
+     */
+    readTV (rowCount=0, order='ASC') {
+        return this.readGeneric(tableTV, getColsTV().names, rowCount, order)
+    }
+
+    /**
+     * Check if a movie or show is already stored in the database
+     * @param {Number} tmdbId TMDb item ID
+     * @param {string} mode movie or tv
+     */
+    checkIfStored (tmdbId, mode) {
+        return new Promise((resolve, reject) => {
+            let result = false
+            if (mode === 'movie') {
+                this.readMovies().then(data => {
+                    if (data.filter(obj => obj.tmdbId.toString() === tmdbId.toString()).length) {
+                        result = true
+                    }
+                    resolve(result)
+                })
+            }
+            else if (mode === 'tv') {
+                this.readTV().then(data => {
+                    if (data.filter(obj => obj.tmdbId.toString() === tmdbId.toString()).length) {
+                        result = true
+                    }
+                    resolve(result)
+                })
+            }
+            else reject('No valid mode given.')
+        })
+    }
 }
 
 module.exports = TVspotter
