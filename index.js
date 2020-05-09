@@ -354,9 +354,22 @@ class TVspotter {
                     }
                     
                     let now = new Date()
-                    let isClose = this.isReleaseClose(now, details.next_episode_to_air.air_date, maxDaysDifference)
                     let status = ''
-                    let nextEpisode = 'S' + details.next_episode_to_air.season_number.toString().padStart(2, '0') + 'E' + details.next_episode_to_air.episode_number.toString().padStart(2, '0')
+                    let isClose = {}
+                    let nextRelease = ''
+                    let nextEpisode = ''
+                    if (!details.next_episode_to_air) {
+                        isClose = {
+                            isClose: false,
+                            difference: 0
+                        }
+                        nextEpisode = ''
+                    }
+                    else {
+                        isClose = this.isReleaseClose(now, details.next_episode_to_air.air_date, maxDaysDifference)
+                        nextEpisode = 'S' + details.next_episode_to_air.season_number.toString().padStart(2, '0') + 'E' + details.next_episode_to_air.episode_number.toString().padStart(2, '0')
+                        nextRelease = details.next_episode_to_air.air_date
+                    }
 
                     if (isClose.isClose && isClose.difference < 0) {
                         status = 'already-released'
@@ -375,7 +388,7 @@ class TVspotter {
                         name: details.name,
                         originalName: details.original_name,
                         firstRelease: details.first_air_date,
-                        nextRelease: details.next_episode_to_air.air_date,
+                        nextRelease: nextRelease,
                         nextEpisode: nextEpisode,
                         poster: this.api.getImageLink(details.poster_path, 'original'),
                         backdrop: this.api.getImageLink(details.backdrop_path, 'original'),
@@ -479,7 +492,7 @@ class TVspotter {
      * @param {boolean} doInitialWait If true (default), waits for 2s before continuing to ensure an established connection with the server
      */
     setCalNotification (title, description, date, doInitialWait=true) {
-        let wait = 2000
+        let wait = 3000
         if (!doInitialWait) wait = 1
 
         sleep(wait).then(() => {
@@ -652,6 +665,23 @@ class TVspotter {
             }
             else reject('No valid mode given.')
         })
+    }
+
+    /**
+     * Update a stored movie or show with new data
+     * @param {Number} tmdbId TMDb item ID
+     * @param {Array|Object} newData Data to overwrite with
+     * @param {string} mode movie or tv
+     */
+    updateStored (tmdbId, newData, mode) {
+        this.openDb()
+        if (mode === 'movie') {
+            this.writer.updateRow(tableMovies, getColsMovies().names, newData, 'tmdbId', tmdbId)
+        }
+        else if (mode === 'tv') {
+            this.writer.updateRow(tableTV, getColsTV().names, newData, 'tmdbId', tmdbId)
+        }
+        this.closeDb()
     }
 }
 
