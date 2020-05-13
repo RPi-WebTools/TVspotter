@@ -683,6 +683,22 @@ class TVspotter {
         }
         this.closeDb()
     }
+
+    /**
+     * Delete a stored movie or show
+     * @param {Number} tmdbId TMDb item ID
+     * @param {string} mode movie or tv
+     */
+    removeStored (tmdbId, mode) {
+        this.openDb()
+        if (mode === 'movie') {
+            this.writer.deleteRow(tableMovies, 'tmdbId', tmdbId)
+        }
+        else if (mode === 'tv') {
+            this.writer.deleteRow(tableTV, 'tmdbId', tmdbId)
+        }
+        this.closeDb()
+    }
 }
 
 module.exports = TVspotter
